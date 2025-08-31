@@ -390,7 +390,46 @@ curl http://localhost:11435/health
 
 Or visit in browser: http://localhost:11435/health
 
-## 📱 Integration Examples
+## 📊 Web Dashboard
+
+新增的**可视化密钥管理界面**，可实时查看和管理API密钥：
+
+### 启动Dashboard
+```cmd
+npm run dashboard
+```
+
+### 访问Dashboard
+打开浏览器访问： **http://localhost:3000/dashboard**
+
+### Dashboard功能
+- ✅ 实时密钥余额显示
+- ✅ 密钥启用/禁用控制
+- ✅ 调用统计和错误监控
+- ✅ 批量导入/导出密钥
+- ✅ 余额低预警提醒
+- ✅ 自动2分钟更新一次
+
+![Dashboard界面](https://via.placeholder.com/800x400/4f46e5/white?text=SiliconFlow+Key+Dashboard)
+
+### 启动多个服务
+可**同时运行**主代理服务和Dashboard：
+
+1. **窗口1** - 启动代理服务：
+```cmd
+npm run dev
+```
+
+2. **窗口2** - 启动Dashboard：
+```cmd
+npm run dashboard
+```
+
+服务地址：
+- **代理服务**: http://localhost:11435
+- **管理面板**: http://localhost:3000
+
+## 📱 API集成示例
 
 ### Direct API usage:
 ```bash
@@ -416,6 +455,9 @@ sf-rotator-local/
 │   └── util.js         # Utility functions
 ├── scripts/
 │   └── win_prepare_keys.ps1  # Windows key preparation
+├── public/
+│   └── dashboard.html  # Web dashboard frontend
+├── server-with-dashboard.mjs  # Dashboard backend server
 ├── .env.example        # Configuration template
 ├── keys.example.txt    # Key file example
 ├── package.json        # Dependencies & scripts

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SiliconFlow Key 管理面板</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .status-green { background-color: #10b981; }
+    .status-red { background-color: #ef4444; }
+    .status-gray { background-color: #6b7280; }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans">
+  <div class="max-w-7xl mx-auto p-6">
+    <!-- 头部 -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+            <span class="mr-2">🔑</span>
+            SiliconFlow Key 管理面板
+          </h1>
+          <p class="text-gray-600 mt-2" id="lastUpdate">加载中...</p>
+        </div>
+        <div class="flex space-x-3">
+          <button onclick="loadKeys()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            🔄 刷新
+          </button>
+          <button onclick="exportKeys()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+            📤 导出
+          </button>
+          <button onclick="importKeys()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+            📥 导入
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 统计 -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" id="stats">
+      <!-- 动态加载统计卡片 -->
+    </div>
+
+    <!-- Key 列表 -->
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-xl font-bold text-gray-900">API Keys 列表</h2>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key ID</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">余额</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">调用次数</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">错误数</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最后更新</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+            </tr>
+          </thead>
+          <tbody id="keysTable" class="bg-white divide-y divide-gray-200">
+            <!-- 动态加载数据 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 导入模态框 -->
+    <div id="importModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+      <div class="flex items-center justify-center min-h-screen">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <h3 class="text-lg font-bold mb-4">导入 API Keys</h3>
+          <textarea id="importTextarea" class="w-full h-32 p-2 border rounded" placeholder="粘贴一行一个key..."></textarea>
+          <div class="flex justify-end space-x-3 mt-4">
+            <button onclick="closeImportModal()" class="px-4 py-2 text-gray-600">取消</button>
+            <button onclick="confirmImport()" class="px-4 py-2 bg-blue-600 text-white rounded">确认导入</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 格式化时间
+    function formatTime(timestamp) {
+      if (!timestamp) return '从未';
+      return new Date(timestamp).toLocaleString('zh-CN');
+    }
+
+    // 格式化金额
+    function formatCurrency(value) {
+      if (value === null || value === undefined) return '计算中...';
+      return `¥${value.toFixed(4)}`;
+    }
+
+    // 获取状态颜色
+    function getStatusColor(key) {
+      if (!key.enabled) return 'status-gray';
+      if (key.errors > 10) return 'status-red';
+      if (key.balance < 0.1) return 'status-red';
+      return 'status-green';
+    }
+
+    // 获取状态文字
+    function getStatusText(key) {
+      if (!key.enabled) return '已禁用';
+      if (key.errors > 10) return '异常';
+      if (key.balance < 0.1) return '余额低';
+      return '正常';
+    }
+
+    // 加载Key数据
+    async function loadKeys() {
+      try {
+        const res = await fetch("/api/keys");
+        const keys = await res.json();
+        
+        // 更新统计
+        updateStats(keys);
+        
+        // 更新表格
+        renderTable(keys);
+        
+        // 更新时间提示
+        document.getElementById('lastUpdate').textContent = 
+          `最后更新: ${new Date().toLocaleTimeString('zh-CN')}`;
+      } catch (err) {
+        console.error('加载失败:', err);
+        alert('加载数据失败，请重试');
+      }
+    }
+
+    // 更新统计卡片
+    function updateStats(keys) {
+      const totalKeys = keys.length;
+      const enabledKeys = keys.filter(k => k.enabled).length;
+      const totalBalance = keys.reduce((sum, k) => sum + (k.balance || 0), 0);
+      const errorKeys = keys.filter(k => k.errors > 0).length;
+
+      const statsHtml = `
+        <div class="bg-white p-6 rounded-lg shadow"><h3 class="text-sm font-medium text-gray-500">总 API Keys</h3><p class="text-2xl font-bold text-gray-900">${totalKeys}</p></div>
+        <div class="bg-white p-6 rounded-lg shadow"><h3 class="text-sm font-medium text-gray-500">启用中</h3><p class="text-2xl font-bold text-green-600">${enabledKeys}</p></div>
+        <div class="bg-white p-6 rounded-lg shadow"><h3 class="text-sm font-medium text-gray-500">剩余余额</h3><p class="text-2xl font-bold text-blue-600">¥${totalBalance.toFixed(2)}</p></div>
+        <div class="bg-white p-6 rounded-lg shadow"><h3 class="text-sm font-medium text-gray-500">有错误</h3><p class="text-2xl font-bold text-red-600">${errorKeys}</p></div>
+      `;
+      
+      document.getElementById('stats').innerHTML = statsHtml;
+    }
+
+    // 渲染表格
+    function renderTable(keys) {
+      const tbody = document.getElementById('keysTable');
+      tbody.innerHTML = '';
+
+      keys.forEach(key => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm font-medium text-gray-900">
+              ${key.id.slice(0, 8)}...${key.id.slice(-4)}
+              <div class="text-xs text-gray-500">${key.id.slice(0, 12)}...</div>
+            </div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm font-medium text-gray-900">${formatCurrency(key.balance)}</div>
+            <div class="text-xs text-gray-500">总计: ${formatCurrency(key.totalBalance)}</div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${key.calls}</td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+              ${key.errors > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
+              ${key.errors}
+            </span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white ${getStatusColor(key)}">
+              ${getStatusText(key)}
+            </span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            ${formatTime(key.lastBalanceCheck)}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+            <button onclick="toggleKey('${key.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">
+              ${key.enabled ? '禁用' : '启用'}
+            </button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // 切换Key状态
+    async function toggleKey(id) {
+      try {
+        await fetch("/api/keys/toggle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id })
+        });
+        loadKeys();
+      } catch (err) {
+        alert('操作失败，请重试');
+      }
+    }
+
+    // 导出Keys
+    async function exportKeys() {
+      try {
+        const res = await fetch("/api/keys/export");
+        const keys = await res.json();
+        const keysText = keys.map(k => k.id).join('\n');
+        
+        const blob = new Blob([keysText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `keys_${new Date().toISOString().split('T')[0]}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert('导出失败，请重试');
+      }
+    }
+
+    // 导入Keys
+    function importKeys() {
+      document.getElementById('importModal').classList.remove('hidden');
+    }
+
+    function closeImportModal() {
+      document.getElementById('importModal').classList.add('hidden');
+      document.getElementById('importTextarea').value = '';
+    }
+
+    async function confirmImport() {
+      const textarea = document.getElementById('importTextarea');
+      const keysText = textarea.value.trim();
+      
+      if (!keysText) {
+        alert('请输入API Key');
+        return;
+      }
+      
+      const newKeys = keysText.split('\n').map(k => k.trim()).filter(Boolean);
+      
+      try {
+        await fetch("/api/keys/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ newKeys })
+        });
+        closeImportModal();
+        loadKeys();
+      } catch (err) {
+        alert('导入失败，请重试');
+      }
+    }
+
+    // 自动刷新
+    setInterval(loadKeys, 5000);
+    
+    // 初始化加载
+    loadKeys();
+  </script>
+</body>
+</html>
