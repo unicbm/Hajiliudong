@@ -1,3 +1,238 @@
+# 硅基流动密钥轮换器 - 本地代理
+
+一个本地的 **OpenAI 兼容代理**，可在多个 SiliconFlow API Key 之间轮换，以提升可靠性和容错能力。
+
+## 🚀 快速开始
+
+### 方法一：一键启动（Windows）
+1. 将 API Key 添加到任意文件（`.txt`、`.csv`、`.json`）中 —— key 必须以 `sk-` 开头  
+2. **双击** `RUN_WINDOWS.bat`  
+3. 按照命令行窗口提示操作  
+4. **保持窗口开启**，即可在 Claude Code Router 中使用  
+
+### 方法二：手动设置
+1. **安装依赖：**
+   ```cmd
+   npm install
+   ```
+
+2. **准备密钥：**
+   - 选项 A：使用 PowerShell 脚本
+   ```powershell
+   PowerShell -ExecutionPolicy Bypass -File scripts\win_prepare_keys.ps1
+   ```
+
+   - 选项 B：手动创建 `keys.txt`
+   ```txt
+   sk-siliconflow-your-key-1
+   sk-siliconflow-your-key-2
+   sk-siliconflow-your-key-3
+   ```
+
+3. **配置环境：**
+   ```cmd
+   copy .env.example .env
+   ```
+   如有需要，编辑 `.env`（大多数默认配置即可使用）。
+
+4. **启动服务：**
+   ```cmd
+   npm run dev
+   ```
+
+---
+
+## 🔗 Claude Code Router 配置
+
+在 Claude Code Router 配置中设置：
+- **Base URL：** `http://localhost:11435/v1`
+- **API Key：** 任意字符串（真实 key 由 rotator 管理）
+- **Model：** `deepseek-ai/DeepSeek-V3`（或任意可用模型）
+- **Streaming：** 开启（推荐）
+
+---
+
+## 📊 健康检查与监控
+
+访问 `http://localhost:11435/health` 可查看：
+- Key 状态总览
+- 每个 Key 的使用统计
+- Key 掩码显示（不会展示完整 key）
+- 当前配置
+
+示例健康检查输出：
+```json
+{
+  "base": "https://api.siliconflow.cn/v1/",
+  "totalKeys": 3,
+  "usableKeys": 3,
+  "keys": [
+    {
+      "id": "001",
+      "keyMasked": "sk-si...key1",
+      "disabled": false,
+      "cooldownUntil": 0,
+      "stats": { "ok": 15, "fail": 2 },
+      "lastError": null
+    }
+  ]
+}
+```
+
+---
+
+## 🔐 Key 安全性
+
+- **完整 Key 永不记录日志**  
+- **日志中仅显示掩码形式**：`sk-ABCD...WXYZ`  
+- **仅本地服务**：只绑定在 localhost  
+- **自动清理**：会自动检测并移除无效 key  
+
+---
+
+## ⚙️ 配置项
+
+在 `.env` 中可配置：
+
+| 变量 | 默认值 | 描述 |
+|------|--------|------|
+| `PORT` | `11435` | 代理服务端口 |
+| `SILICONFLOW_BASE_URL` | `https://api.siliconflow.cn/v1/` | SiliconFlow API 基础地址 |
+| `KEY_FILE` | `./keys.txt` | 存放 API key 的文件 |
+| `SILICONFLOW_KEYS` | ` ` | 通过环境变量传入的逗号分隔 key |
+| `MAX_TRIES_PER_REQUEST` | `6` | 单请求最大尝试次数 |
+| `COOLDOWN_SECONDS` | `60` | 临时失败的冷却时间（秒） |
+| `ENABLE_STREAMING` | `true` | 是否启用 SSE 流式输出 |
+
+---
+
+## 🔄 Key 轮换特性
+
+- **智能重试**：遇到 401/402 错误时，永久拉黑该 key  
+- **冷却机制**：临时错误触发冷却  
+- **负载均衡**：轮询选择 key  
+- **健康监控**：实时 key 状态监控 `/health`  
+- **错误恢复**：失败时自动切换其他 key  
+
+---
+
+## 🔧 支持的 Key 文件格式
+
+### 文本文件（`keys.txt`）
+```
+sk-siliconflow-abc123def456
+# 注释行
+sk-siliconflow-xyz789uvw012
+```
+
+### JSON 文件（`keys.json`）
+```json
+["sk-siliconflow-key1", "sk-siliconflow-key2"]
+```
+
+### CSV 文件（`keys.csv`）
+```csv
+key
+sk-siliconflow-key1
+sk-siliconflow-key2
+```
+
+---
+
+## 🐛 故障排查
+
+### 常见问题：
+
+1. **“No keys found”**  
+   - 确认 key 以 `sk-` 开头  
+   - 检查 `keys.txt` 是否存在  
+   - 确认文件为 UTF-8 编码  
+
+2. **“Connection refused”**  
+   - 确认服务正在运行（窗口需保持开启）  
+   - 检查防火墙设置  
+   - 验证 `localhost:11435` 可访问  
+
+3. **“All keys exhausted”**  
+   - 访问 http://localhost:11435/health 查看状态  
+   - 确认 key 有效且余额充足  
+   - 检查 401/402 错误（无效 key）  
+
+4. **PowerShell 策略报错**  
+   - 管理员执行：`Set-ExecutionPolicy RemoteSigned`  
+   - 或使用：`PowerShell -ExecutionPolicy Bypass -File scripts\win_prepare_keys.ps1`
+
+### 检查服务状态：
+```cmd
+curl http://localhost:11435/health
+```
+或浏览器访问： http://localhost:11435/health  
+
+---
+
+## 📱 集成示例
+
+### 直接 API 调用：
+```bash
+curl http://localhost:11435/v1/chat/completions \
+  -H "Authorization: Bearer anything" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"deepseek-ai/DeepSeek-V3","messages":[{"role":"user","content":"Hello"}]}'
+```
+
+### 与 Claude CLI 搭配：
+```bash
+claude --set base-url http://localhost:11435/v1
+claude --set api-key placeholder
+```
+
+---
+
+## 🗂️ 项目结构
+
+```
+sf-rotator-local/
+├── src/
+│   ├── server.js       # 主代理服务器
+│   ├── keyManager.js   # Key 轮换逻辑
+│   └── util.js         # 工具函数
+├── scripts/
+│   └── win_prepare_keys.ps1  # Windows Key 准备脚本
+├── .env.example        # 配置模板
+├── keys.example.txt    # 示例 Key 文件
+├── package.json        # 依赖与脚本
+├── RUN_WINDOWS.bat     # Windows 一键启动脚本
+└── README.md           # 本文件
+```
+
+---
+
+## 🔄 自动 Key 检测
+
+脚本会自动查找以下文件中的 Key：
+- 项目根目录下的 `keys.txt`
+- 任意 `.txt`、`.csv`、`.json` 文件中包含 `sk-` 的内容
+- 递归扫描整个项目目录  
+
+---
+
+## 🚨 安全注意事项
+
+- **切勿将 API Key 提交到版本控制**  
+- **不要上传 `keys.txt`**  
+- **Key 仅本地存储**  
+- **服务只绑定 localhost**  
+- **不会暴露任何外部 API**  
+
+---
+
+## 💡 小技巧
+
+1. **多来源配置**：同时设置 `KEY_FILE` 与 `SILICONFLOW_KEYS`，增强冗余性  
+2. **健康监控**：将 `/health` 接口加入系统监控  
+3. **动态更新**：更新 `keys.txt` 后重启即可增删 Key  
+4. **测试**：生产前用 `/health` 接口验证 Key 状态  
+
 # SiliconFlow Key Rotator - Local Proxy
 
 A local OpenAI-compatible proxy that rotates between multiple SiliconFlow API keys for improved reliability and failover.
