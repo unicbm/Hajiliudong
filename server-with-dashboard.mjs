@@ -111,12 +111,32 @@ async function updateSingleKeyBalance(key) {
       key.totalBalance = parseFloat(result.data.totalBalance || 0);
       key.lastBalanceCheck = new Date().toISOString();
       key.status = result.data.status || 'unknown';
+      
+      // 自动禁用没有余额的密钥
+      if (key.totalBalance <= 0) {
+        if (key.enabled) {
+          key.enabled = false;
+          key.disabledReason = '余额不足，自动禁用';
+          key.disabledAt = new Date().toISOString();
+          console.log(`🚫 Key ${key.id.slice(0, 8)}... 余额不足，已自动禁用`);
+        }
+      }
     } else {
       throw new Error("Invalid response format");
     }
   } catch (err) {
     console.error(`❌ Key ${key.id.slice(0, 8)}... 余额查询失败:`, err.message);
     key.errors += 1;
+    
+    // 如果是401或402错误，可能是密钥无效，自动禁用
+    if (err.message.includes('401') || err.message.includes('402')) {
+      if (key.enabled) {
+        key.enabled = false;
+        key.disabledReason = '密钥无效，自动禁用';
+        key.disabledAt = new Date().toISOString();
+        console.log(`🚫 Key ${key.id.slice(0, 8)}... 密钥无效，已自动禁用`);
+      }
+    }
   }
 }
 

@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { fetch } from 'undici';
 import { maskKey, delay } from './util.js';
 
 export class KeyManager {
@@ -48,7 +49,13 @@ export class KeyManager {
       disabled: false,
       cooldownUntil: 0,
       stats: { ok: 0, fail: 0 },
-      lastError: null
+      lastError: null,
+      balance: null,
+      chargeBalance: null,
+      totalBalance: null,
+      lastBalanceCheck: null,
+      disabledReason: null,
+      disabledAt: null
     }));
 
     if (this.keys.length === 0) {
@@ -99,11 +106,86 @@ export class KeyManager {
     
     if (permanent) {
       kinfo.disabled = true;
+      kinfo.disabledReason = reason;
+      kinfo.disabledAt = new Date().toISOString();
       console.log(`[KEY] Key ${maskKey(kinfo.key)} permanently disabled: ${reason}`);
     } else {
       kinfo.cooldownUntil = Date.now() + (this.cooldownSeconds * 1000);
       console.log(`[KEY] Key ${maskKey(kinfo.key)} cooling down for ${this.cooldownSeconds}s: ${reason}`);
     }
+  }
+
+  async checkKeyBalance(kinfo) {
+    try {
+      const response = await fetch('https://api.siliconflow.cn/v1/user/info', {
+        headers: { 
+          Authorization: `Bearer ${kinfo.key}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 402) {
+          this.markFail(kinfo, `Balance check failed: ${response.status} ${response.statusText}`, { permanent: true });
+          return false;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.data?.balance !== undefined) {
+        kinfo.balance = parseFloat(result.data.balance || 0);
+        kinfo.chargeBalance = parseFloat(result.data.chargeBalance || 0);
+        kinfo.totalBalance = parseFloat(result.data.totalBalance || 0);
+        kinfo.lastBalanceCheck = new Date().toISOString();
+        
+        // 自动禁用没有余额的密钥
+        if (kinfo.totalBalance <= 0) {
+          if (!kinfo.disabled) {
+            this.markFail(kinfo, '余额不足，自动禁用', { permanent: true });
+            return false;
+          }
+        }
+        return true;
+      } else {
+        throw new Error('Invalid response format');
+      }
+    } catch (error) {
+      console.error(`[KEY] Balance check failed for ${maskKey(kinfo.key)}: ${error.message}`);
+      return false;
+    }
+  }
+
+  async checkAllBalances() {
+    console.log(`[BALANCE] Checking balances for ${this.keys.length} keys...`);
+    let disabledCount = 0;
+    
+    for (const kinfo of this.keys) {
+      if (!kinfo.disabled) {
+        const result = await this.checkKeyBalance(kinfo);
+        if (!result && kinfo.disabled) {
+          disabledCount++;
+        }
+        await delay(100); // 防止请求过快
+      }
+    }
+    
+    if (disabledCount > 0) {
+      console.log(`[BALANCE] Auto-disabled ${disabledCount} keys due to insufficient balance`);
+    }
+  }
+
+  startBalanceChecker(intervalMinutes = 5) {
+    // 立即检查一次
+    this.checkAllBalances();
+    
+    // 设置定期检查
+    setInterval(() => {
+      this.checkAllBalances();
+    }, intervalMinutes * 60 * 1000);
+    
+    console.log(`[BALANCE] Balance checker started, will check every ${intervalMinutes} minutes`);
   }
 
   health() {
@@ -118,7 +200,12 @@ export class KeyManager {
         disabled: k.disabled,
         cooldownUntil: Math.max(0, k.cooldownUntil - now),
         stats: k.stats,
-        lastError: k.lastError
+        lastError: k.lastError,
+        balance: k.balance,
+        totalBalance: k.totalBalance,
+        lastBalanceCheck: k.lastBalanceCheck,
+        disabledReason: k.disabledReason,
+        disabledAt: k.disabledAt
       }))
     };
   }

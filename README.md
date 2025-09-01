@@ -112,7 +112,10 @@
 - **冷却机制**：临时错误触发冷却  
 - **负载均衡**：轮询选择 key  
 - **健康监控**：实时 key 状态监控 `/health`  
-- **错误恢复**：失败时自动切换其他 key  
+- **错误恢复**：失败时自动切换其他 key
+- 🆕 **自动余额检查**：每5分钟检查所有密钥余额
+- 🆕 **智能禁用**：自动禁用余额不足或无效的密钥
+- 🆕 **轮询排除**：被禁用的密钥自动从轮询中排除  
 
 ---
 
@@ -153,10 +156,11 @@ sk-siliconflow-key2
    - 检查防火墙设置  
    - 验证 `localhost:11435` 可访问  
 
-3. **“All keys exhausted”**  
+3. **"All keys exhausted"**  
    - 访问 http://localhost:11435/health 查看状态  
    - 确认 key 有效且余额充足  
-   - 检查 401/402 错误（无效 key）  
+   - 检查 401/402 错误（无效 key）
+   - 🆕 检查Dashboard查看哪些密钥被自动禁用  
 
 4. **PowerShell 策略报错**  
    - 管理员执行：`Set-ExecutionPolicy RemoteSigned`  
@@ -223,6 +227,32 @@ sf-rotator-local/
 - **Key 仅本地存储**  
 - **服务只绑定 localhost**  
 - **不会暴露任何外部 API**  
+
+## 🤖 自动密钥管理
+
+### 自动禁用机制
+系统会自动检测和禁用以下类型的密钥：
+
+1. **余额不足密钥**
+   - 当总余额 ≤ 0 时自动禁用
+   - 显示状态：`自动禁用(余额)`
+
+2. **无效密钥**
+   - API返回401/402错误时自动禁用
+   - 显示状态：`自动禁用(无效)`
+
+3. **检查频率**
+   - 主代理服务：每5分钟检查一次
+   - 仪表板服务：每2分钟检查一次
+
+### 智能轮询
+- 被禁用的密钥会自动从轮询队列中排除
+- 只有启用且未冷却的密钥参与轮询
+- 实现真正的"无人值守"运行
+
+### 恢复机制
+- 如果密钥余额恢复，可在Dashboard中手动重新启用
+- 系统不会自动重新启用已禁用的密钥（防止频繁切换）
 
 ---
 
@@ -409,6 +439,9 @@ npm run dashboard
 - ✅ 批量导入/导出密钥
 - ✅ 余额低预警提醒
 - ✅ 自动2分钟更新一次
+- 🆕 **自动禁用没有余额的密钥**
+- 🆕 **自动禁用无效密钥（401/402错误）**
+- 🆕 **显示自动禁用原因和时间**
 
 ![Dashboard界面](https://via.placeholder.com/800x400/4f46e5/white?text=SiliconFlow+Key+Dashboard)
 
@@ -451,8 +484,11 @@ claude --set api-key placeholder
 sf-rotator-local/
 ├── src/
 │   ├── server.js       # Main proxy server
-│   ├── keyManager.js   # Key rotation logic
-│   └── util.js         # Utility functions
+│   ├── keyManager.js   # Key rotation logic  
+│   ├── util.js         # Utility functions
+│   ├── database.js     # Database management (SQLite)
+│   ├── statsApi.js     # Statistics API endpoints
+│   └── statsCollector.js # Usage statistics collector
 ├── scripts/
 │   └── win_prepare_keys.ps1  # Windows key preparation
 ├── public/

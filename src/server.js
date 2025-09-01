@@ -201,4 +201,7 @@ app.listen(PORT, 'localhost', () => {
   console.log(`🔑 Keys loaded: ${keyManager.keys.length}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log('='.repeat(60));
+  
+  // 启动余额检查器（每5分钟检查一次）
+  keyManager.startBalanceChecker(5);
 });
