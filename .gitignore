@@ -101,6 +101,3 @@ jspm_packages/
 *.tmp
 *.temp
 *.bak
-一键启动.bat
-start-dashboard.bat
-stop-dashboard.bat

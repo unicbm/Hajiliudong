@@ -446,6 +446,21 @@ npm run dashboard
 ![Dashboard界面](https://via.placeholder.com/800x400/4f46e5/white?text=SiliconFlow+Key+Dashboard)
 
 ### 启动多个服务
+
+#### 方法1：一键启动（推荐）
+```cmd
+# 双击运行或命令行执行
+start-all.bat
+```
+
+**功能特点：**
+- ✅ 自动安装依赖（首次运行）
+- ✅ 同时启动代理服务和仪表板
+- ✅ 自动打开浏览器访问管理面板
+- ✅ 服务状态检查和提示
+- ✅ 详细的使用说明
+
+#### 方法2：手动分别启动
 可**同时运行**主代理服务和Dashboard：
 
 1. **窗口1** - 启动代理服务：
@@ -458,7 +473,13 @@ npm run dev
 npm run dashboard
 ```
 
-服务地址：
+#### 停止所有服务
+```cmd
+# 双击运行或命令行执行
+stop-all.bat
+```
+
+**服务地址：**
 - **代理服务**: http://localhost:11435
 - **管理面板**: http://localhost:3000
 
@@ -498,6 +519,9 @@ sf-rotator-local/
 ├── keys.example.txt    # Key file example
 ├── package.json        # Dependencies & scripts
 ├── RUN_WINDOWS.bat   # One-click start (Windows)
+├── start-all.bat       # 一键启动所有服务（推荐）
+├── stop-all.bat        # 一键停止所有服务
+├── ARCHITECTURE.md     # 系统架构技术文档
 └── README.md          # This file
 ```
 
