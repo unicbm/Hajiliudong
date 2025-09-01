@@ -7,7 +7,10 @@
       "Bash(dir:*)",
       "Bash(taskkill:*)",
       "Bash(npm start)",
-      "Bash(npm run dashboard:*)"
+      "Bash(npm run dashboard:*)",
+      "Bash(./stop-all.bat)",
+      "Bash(start-all.bat)",
+      "Bash(stop-all.bat)"
     ],
     "deny": [],
     "ask": []

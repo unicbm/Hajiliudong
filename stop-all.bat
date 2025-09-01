@@ -14,41 +14,35 @@ echo.
 echo [INFO] Stopping all services...
 echo.
 
-:: Stop Node.js processes (may include our services)
-for /f "tokens=2" %%i in ('tasklist /fi "imagename eq node.exe" /fo csv ^| find /v "PID"') do (
-    if not "%%i"=="" (
-        echo [INFO] Stopping Node.js process: %%i
-        taskkill /pid %%i /f >nul 2>&1
+:: Stop specific services by port
+echo [INFO] Stopping SiliconFlow services...
+
+:: Stop proxy service on port 11435
+for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr :11435') do (
+    if not "%%a"=="0" (
+        echo [INFO] Stopping proxy service (PID: %%a)
+        taskkill /PID %%a /F >nul 2>&1
+        if not errorlevel 1 (
+            echo [SUCCESS] Proxy service stopped
+        )
+    )
+)
+
+:: Stop dashboard service on port 3000
+for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr :3000') do (
+    if not "%%a"=="0" (
+        echo [INFO] Stopping dashboard service (PID: %%a)
+        taskkill /PID %%a /F >nul 2>&1
+        if not errorlevel 1 (
+            echo [SUCCESS] Dashboard service stopped
+        )
     )
 )
 
 :: Wait for processes to stop completely
-timeout /t 2 /nobreak >nul
+ping -n 2 127.0.0.1 >nul
 
-:: Check port occupation
-echo [INFO] Checking port occupation...
-
-netstat -ano | findstr :11435 >nul
-if not errorlevel 1 (
-    echo [WARNING] Port 11435 still occupied
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :11435') do (
-        echo [INFO] Stopping process: %%a
-        taskkill /pid %%a /f >nul 2>&1
-    )
-) else (
-    echo [SUCCESS] Port 11435 released
-)
-
-netstat -ano | findstr :3000 >nul
-if not errorlevel 1 (
-    echo [WARNING] Port 3000 still occupied
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3000') do (
-        echo [INFO] Stopping process: %%a
-        taskkill /pid %%a /f >nul 2>&1
-    )
-) else (
-    echo [SUCCESS] Port 3000 released
-)
+echo [SUCCESS] SiliconFlow services stopped
 
 echo.
 echo ====================================================================

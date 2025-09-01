@@ -496,6 +496,11 @@ npm run dashboard
 stop-all.bat
 ```
 
+**🔧 安全改进**：
+- ✅ 只停止SiliconFlow相关服务（端口11435和3000）
+- ✅ 不再影响其他Node.js应用（如Claude Code）
+- ✅ 精确进程管理，避免误杀
+
 **服务地址：**
 - **代理服务**: http://localhost:11435
 - **管理面板**: http://localhost:3000
