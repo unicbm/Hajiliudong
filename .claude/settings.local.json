@@ -4,7 +4,10 @@
       "WebFetch(domain:localhost)",
       "Bash(curl:*)",
       "Bash(node:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(taskkill:*)",
+      "Bash(npm start)",
+      "Bash(npm run dashboard:*)"
     ],
     "deny": [],
     "ask": []

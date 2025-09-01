@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 chcp 65001 >nul 2>&1
 title SiliconFlow Key Rotator - Startup Script
-color 0A
+color 0B
 
 echo.
 echo ====================================================================
@@ -43,13 +43,13 @@ if not exist "keys.txt" (
 )
 
 echo [INFO] Starting proxy server (port 11435)...
-start "SiliconFlow Proxy Server" cmd /c "npm start && pause"
+start "SiliconFlow Proxy Server" cmd /k "title SiliconFlow Proxy Server && npm start"
 
 :: Wait for main service to start
 timeout /t 3 /nobreak >nul
 
 echo [INFO] Starting dashboard service (port 3000)...
-start "SiliconFlow Dashboard" cmd /c "npm run dashboard && pause"
+start "SiliconFlow Dashboard" cmd /k "title SiliconFlow Dashboard && npm run dashboard"
 
 :: Wait for dashboard service to start
 echo [INFO] Waiting for services to start...
@@ -80,6 +80,11 @@ echo [URL] Dashboard: http://localhost:3000/dashboard
 echo [URL] Proxy API: http://localhost:11435
 echo [URL] Health Check: http://localhost:11435/health
 echo.
+
+:: Display key statistics
+echo [INFO] Checking key status...
+node scripts/check-stats.js
+
 echo [INFO] Opening dashboard...
 
 :: Open default browser to access dashboard

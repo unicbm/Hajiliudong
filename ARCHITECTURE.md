@@ -56,9 +56,14 @@ sf-rotator-local/
 │   ├── database.js            # 数据库管理
 │   ├── statsApi.js            # 统计API
 │   └── statsCollector.js      # 统计收集器
+├── scripts/
+│   ├── check-stats.js         # 密钥状态检查脚本
+│   └── win_prepare_keys.ps1   # Windows密钥准备脚本
 ├── public/
 │   └── dashboard.html         # 仪表板前端页面
 ├── server-with-dashboard.mjs  # 仪表板后端服务
+├── start-all.bat              # Windows一键启动脚本
+├── stop-all.bat               # Windows一键停止脚本
 ├── package.json               # 项目配置
 └── keys.txt                   # API密钥文件（可选）
 ```
@@ -326,10 +331,31 @@ SILICONFLOW_BASE_URL=https://api.siliconflow.cn/v1/
 
 ### 启动命令
 
+#### 一键启动（推荐）
+```bash
+start-all.bat         # Windows一键启动所有服务
+stop-all.bat          # Windows一键停止所有服务
+```
+
+**一键启动功能特性**:
+- 自动检查Node.js环境和依赖
+- 同时启动代理服务和仪表板服务
+- 显示彩色状态信息（青蓝色主题）
+- 正确命名服务窗口标题
+- 自动检查服务启动状态
+- 显示详细的密钥统计信息
+- 自动打开浏览器到管理面板
+
+#### 手动启动
 ```bash
 npm start              # 启动主代理服务
 npm run dashboard      # 启动仪表板服务
 npm run dev           # 开发模式
+```
+
+#### 密钥状态检查
+```bash
+node scripts/check-stats.js  # 显示密钥统计信息
 ```
 
 ## 监控和日志

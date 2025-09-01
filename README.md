@@ -4,11 +4,16 @@
 
 ## 🚀 快速开始
 
-### 方法一：一键启动（Windows）
-1. 将 API Key 添加到任意文件（`.txt`、`.csv`、`.json`）中 —— key 必须以 `sk-` 开头  
-2. **双击** `RUN_WINDOWS.bat`  
-3. 按照命令行窗口提示操作  
-4. **保持窗口开启**，即可在 Claude Code Router 中使用  
+### 方法一：一键启动（Windows，推荐）
+1. 将 API Key 添加到 `keys.txt` 文件中（每行一个key，以 `sk-` 开头）
+2. **双击** `start-all.bat`
+3. 系统将自动：
+   - ✅ 检查Node.js环境和依赖
+   - ✅ 启动代理服务（端口11435）
+   - ✅ 启动管理面板（端口3000）  
+   - ✅ 显示密钥统计信息（包括禁用密钥数量）
+   - ✅ 自动打开浏览器到管理面板
+4. **保持服务窗口开启**，即可在应用中使用
 
 ### 方法二：手动设置
 1. **安装依赖：**
@@ -197,16 +202,24 @@ claude --set api-key placeholder
 ```
 sf-rotator-local/
 ├── src/
-│   ├── server.js       # 主代理服务器
-│   ├── keyManager.js   # Key 轮换逻辑
-│   └── util.js         # 工具函数
+│   ├── server.js              # 主代理服务器
+│   ├── keyManager.js          # Key 轮换逻辑
+│   ├── util.js                # 工具函数
+│   ├── database.js            # 数据库管理
+│   ├── statsApi.js            # 统计API
+│   └── statsCollector.js      # 统计收集器
 ├── scripts/
-│   └── win_prepare_keys.ps1  # Windows Key 准备脚本
-├── .env.example        # 配置模板
-├── keys.example.txt    # 示例 Key 文件
-├── package.json        # 依赖与脚本
-├── RUN_WINDOWS.bat     # Windows 一键启动脚本
-└── README.md           # 本文件
+│   ├── check-stats.js         # 密钥状态检查脚本
+│   └── win_prepare_keys.ps1   # Windows Key 准备脚本
+├── public/
+│   └── dashboard.html         # Web管理界面
+├── server-with-dashboard.mjs  # 仪表板后端服务
+├── start-all.bat              # Windows一键启动脚本
+├── stop-all.bat               # Windows一键停止脚本
+├── .env.example               # 配置模板
+├── keys.example.txt           # 示例 Key 文件
+├── package.json               # 依赖与脚本
+└── README.md                  # 本文件
 ```
 
 ---
@@ -261,7 +274,11 @@ sf-rotator-local/
 1. **多来源配置**：同时设置 `KEY_FILE` 与 `SILICONFLOW_KEYS`，增强冗余性  
 2. **健康监控**：将 `/health` 接口加入系统监控  
 3. **动态更新**：更新 `keys.txt` 后重启即可增删 Key  
-4. **测试**：生产前用 `/health` 接口验证 Key 状态  
+4. **测试**：生产前用 `/health` 接口验证 Key 状态
+5. **一键停止**：使用 `stop-all.bat` 快速停止所有服务
+6. **状态检查**：使用 `node scripts/check-stats.js` 随时查看密钥统计
+
+---
 
 # SiliconFlow Key Rotator - Local Proxy
 
